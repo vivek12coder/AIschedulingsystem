@@ -48,11 +48,14 @@ def generate_base_schedule(
                 if not available_teachers:
                     continue
 
+                required_room_type = (
+                    "lab" if subj.subject_type == "lab" else "classroom"
+                )
                 suitable_rooms = [
                     r
                     for r in rooms
                     if r.capacity >= cls.num_students
-                    and r.room_type == subj.subject_type
+                    and r.room_type == required_room_type
                     and (r.id, slot.id) not in room_booked
                 ]
                 if not suitable_rooms:

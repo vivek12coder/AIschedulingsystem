@@ -2,37 +2,37 @@
 
 ## Overview
 
-The AI Timetable Scheduling System is an intelligent scheduling engine that automatically generates conflict-free timetables for educational institutions. It combines constraint programming (Google OR-Tools) with evolutionary algorithms (DEAP) to produce optimized schedules that satisfy hard constraints (no room or instructor conflicts) and maximize soft constraints (preferred time slots, balanced workloads).
+The AI Timetable Scheduling System is an intelligent scheduling engine that automatically generates conflict-free timetables for educational institutions. It combines a greedy Constraint Satisfaction Problem (CSP) solver with evolutionary optimization (DEAP Genetic Algorithm) to produce optimized schedules that satisfy hard constraints (no room, teacher, or class conflicts) and maximize soft constraints (preferred day off, morning scheduling for heavy subjects, balanced workloads).
 
 ## Development Phases
 
 ### Phase 1 — Data Modeling
-Define core entities: courses, instructors, rooms, time slots, and sections. Build Pydantic models for validation and serialization.
+Define core entities: subjects, teachers, rooms, time slots, and classes. Build Pydantic v2 models for validation and serialization.
 
 ### Phase 2 — Constraint Engine
-Implement hard and soft constraints using Google OR-Tools CP-SAT solver. Hard constraints prevent double-booking of rooms and instructors. Soft constraints handle preferences like preferred time slots and room capacities.
+Implement hard and soft constraint checking functions in Python. Hard constraints prevent double-booking of rooms, teachers, and classes. Soft constraints handle preferences like teacher day-off, morning scheduling for heavy subjects, and balanced weekly workload.
 
-### Phase 3 — Solver Integration
-Wire the constraint engine into a scheduling solver that takes input data, builds the constraint model, solves it, and returns a complete timetable.
+### Phase 3 — AI Solver (CSP + Genetic Algorithm)
+Hybrid approach: a greedy CSP solver generates a valid base schedule by assigning subjects to time slots while respecting hard constraints. A DEAP Genetic Algorithm then optimizes the schedule by swapping time slot assignments to improve soft constraint satisfaction.
 
-### Phase 4 — Conflict Resolution
-Use DEAP genetic algorithms to iteratively improve schedules, resolve edge-case conflicts, and optimize the overall fitness of the timetable.
+### Phase 4 — Conflict Detection & Resolution
+Detect remaining conflicts in the generated schedule, find specific conflicting entries, and auto-fix them by reassigning to available time slots. Re-score the schedule after resolution.
 
 ### Phase 5 — Scoring & Evaluation
-Score generated timetables against quality metrics: constraint satisfaction rate, instructor preference fulfillment, room utilization, and schedule compactness.
+Score generated timetables using a penalty-based system: hard constraint violations receive heavy penalties (100 points each), soft constraint violations receive lighter penalties (10 points each), starting from a base score of 1000.
 
 ### Phase 6 — REST API
-Expose the scheduling engine through a FastAPI REST API, allowing clients to submit scheduling requests and retrieve optimized timetables.
+Expose the scheduling engine through a FastAPI REST API, allowing clients to submit scheduling requests, validate schedules, and resolve conflicts.
 
 ## Tech Stack
 
 | Component              | Technology            |
 |------------------------|-----------------------|
 | Language               | Python 3.10+          |
-| Constraint Solving     | Google OR-Tools       |
+| CSP Solver             | Custom greedy solver  |
 | Evolutionary Algorithm | DEAP                  |
 | API Framework          | FastAPI + Uvicorn     |
-| Data Validation        | Pydantic              |
+| Data Validation        | Pydantic v2           |
 | Testing                | pytest + httpx        |
 
 ## Installation
@@ -61,7 +61,7 @@ pytest
 
 ```
 ┌──────────────┐
-│  Input Data  │  Courses, Instructors, Rooms, Time Slots
+│  Input Data  │  Subjects, Teachers, Rooms, Classes, Time Slots
 └──────┬───────┘
        │
        ▼
@@ -71,22 +71,22 @@ pytest
        │
        ▼
 ┌──────────────────┐
-│ Constraint Model │  OR-Tools CP-SAT builds hard & soft constraints
+│  CSP Solver      │  Greedy algorithm generates valid base schedule
 └──────┬───────────┘
        │
        ▼
-┌──────────────┐
-│    Solver    │  CP-SAT solver finds feasible timetable
-└──────┬───────┘
+┌────────────────────┐
+│  Genetic Algorithm │  DEAP optimizes soft constraint satisfaction
+└──────┬─────────────┘
        │
        ▼
 ┌────────────────────┐
-│ Conflict Resolver  │  DEAP genetic algorithm refines solution
+│ Conflict Resolver  │  Detects and auto-fixes remaining conflicts
 └──────┬─────────────┘
        │
        ▼
 ┌──────────────┐
-│   Scoring    │  Evaluate timetable quality metrics
+│   Scoring    │  Penalty-based timetable quality scoring
 └──────┬───────┘
        │
        ▼
@@ -101,13 +101,14 @@ pytest
 scheduler/
   __init__.py
   models.py             # Pydantic data models
-  constraints.py        # Hard & soft constraint definitions
-  solver.py             # OR-Tools CP-SAT solver integration
-  conflict_resolver.py  # DEAP-based conflict resolution
-  scoring.py            # Timetable quality scoring
+  constraints.py        # Hard & soft constraint checking
+  solver.py             # Greedy CSP + DEAP Genetic Algorithm
+  conflict_resolver.py  # Conflict detection and auto-fix
+  scoring.py            # Penalty-based schedule scoring
   api.py                # FastAPI endpoints
 tests/
   __init__.py
+  conftest.py
   test_models.py
   test_constraints.py
   test_solver.py
